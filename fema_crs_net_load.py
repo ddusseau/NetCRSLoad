@@ -101,20 +101,6 @@ def crs_cross_sub(doi):
     crs_weighted = crs_weighted.to_frame(name='avg_w_crs_disc')
     crs_weighted_dict = crs_weighted.to_dict()['avg_w_crs_disc']
 
-    # Calculate which communities are being subsidized, so which communities have a higher CRS discount than the state average
-    nfip_gpd = gpd.read_file('./NFIP_communities/NFIP_communities_CRS.shp')
-    states = ['AL','AR','AZ','CA','CO','CT','DC','DE','FL','GA','IA','ID','IL','IN','KS','KY','LA','MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NE','NH','NJ','NM','NV','NY','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY']
-    nfip_gpd = nfip_gpd[nfip_gpd['state'].isin(states)]
-    crs_dict = {1: 0.45, 2: 0.4, 3: 0.35, 4: 0.3, 5: 0.25, 6: 0.2, 7: 0.15, 8: 0.1, 9: 0.05, 10: 0, 0: 0}
-    # map dictionary of CRS class to discount amount
-    nfip_gpd['CRS_discount'] = nfip_gpd['crs_class_'].map(crs_dict)
-
-    # map dictionary of state average CRS discounts
-    nfip_gpd['state_crs_avg_discount'] = nfip_gpd['state'].map(crs_weighted_dict)
-
-    # nfip_gpd_subsidizing = nfip_gpd[nfip_gpd['state_crs_avg_discount'] > nfip_gpd['CRS_discount']]
-    # nfip_gpd_subsidizing.to_file('./NFIP_communities/NFIP_communities_CRS_subsidizing.shp')
-
     # Calculate how much more each community and each policyholder in the communities are paying to subsidize the CRS discounted communities
     nfip_data['state_crs_avg_discount'] = nfip_data['propertyState'].map(crs_weighted_dict)
 
@@ -144,15 +130,15 @@ def crs_cross_sub(doi):
     nfip_gpd_merged = county_gpd.merge(net_crs_load_community, on='countyCode')
     nfip_gpd_merged.to_file(f'./cb_2018_us_county_20m/cb_2018_us_county_20m_netCRSload_{doi}.shp')
 
-    nfip_gpd_policies = nfip_gpd_merged.merge(policies_county, on='countyCode')
-    nfip_gpd_policies.to_file(f'./NFIP_communities/NFIP_communities_policies_{doi}.shp')
+    # nfip_gpd_policies = nfip_gpd_merged.merge(policies_county, on='countyCode')
+    # nfip_gpd_policies.to_file(f'./NFIP_communities/NFIP_communities_policies_{doi}.shp')
 
     return
 
 
 ## calculate correlation between CRS net load and rural capacity index
 def crs_load_correlation():
-    nfip_gpd = gpd.read_file('./cb_2018_us_county_20m/cb_2018_us_county_20m_netCRSload.shp')
+    nfip_gpd = gpd.read_file(f'./cb_2018_us_county_20m/cb_2018_us_county_20m_netCRSload_{doi}.shp')
 
     nfip_gpd_pos = nfip_gpd[nfip_gpd['net_crs_lo'] > 0]
     nfip_gpd_neg = nfip_gpd[nfip_gpd['net_crs_lo'] < 0]
@@ -325,12 +311,12 @@ def cvi():
 doi = '2024-01-31'
 
 
-preprocess(doi)
+# preprocess(doi)
 
 crs_cross_sub(doi)
 
-crs_load_correlation()
+# crs_load_correlation()
 
-rr2_crs()
+# rr2_crs()
 
-cvi()
+# cvi()
