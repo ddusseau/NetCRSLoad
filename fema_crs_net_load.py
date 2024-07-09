@@ -13,6 +13,7 @@ def read_csv(file_name, fields):
     for chunk in pd.read_csv(file_name, chunksize=1000000, usecols=fields, engine="c"):
         yield chunk
 
+## preprocess NFIP data for date and fields of interest
 def preprocess(doi):
     fields = ['propertyState', 'countyCode', 'policyEffectiveDate','crsClassCode','policyTerminationDate', 'occupancyType','nfipRatedCommunityNumber','nfipCommunityNumberCurrent','totalInsurancePremiumOfThePolicy','rateMethod','communityProbationSurcharge','reserveFundAssessment','federalPolicyFee']
     pd_dataframes = []
@@ -68,6 +69,7 @@ def preprocess(doi):
     return
 
 
+## weighted average function
 def w_avg(df, values, weights):
     d = df[values]
     w = df[weights]
@@ -75,10 +77,9 @@ def w_avg(df, values, weights):
     return (d * w).sum() / w.sum()
 
 
+## calculate the average CRS discount for each state. This would be the average discount percent using the premium as the weight. We can use the historical premium or the full risk premium.
 def crs_cross_sub(doi):
     year = doi[:4]
-
-    # calculate the average CRS discount for each state. This would be the average discount percent using the premium as the weight. We can use the historical premium or the full risk premium.
 
     nfip_data = pd.read_csv(f'NFIP_crs_{doi}.csv', engine="c")
 
@@ -148,6 +149,8 @@ def crs_cross_sub(doi):
 
     return
 
+
+## calculate correlation between CRS net load and rural capacity index
 def crs_load_correlation():
     nfip_gpd = gpd.read_file('./cb_2018_us_county_20m/cb_2018_us_county_20m_netCRSload.shp')
 
@@ -212,6 +215,7 @@ def crs_load_correlation():
     return
 
 
+## calculate net CRS load under Risk Rating 2.0
 def rr2_crs():
     rr2 = pd.read_csv('fema_risk-rating-2.0_exhibit_4.csv', skiprows=2, skipfooter=10)
     rr2.loc[~rr2['Asterisk'].isna(),'Policies in Force (PIF)'] = 5 # change all counties with state average to 5
@@ -282,6 +286,7 @@ def rr2_crs():
     return
 
 
+## calculate correlation between net CRS load and different climate perils in climate vulnerability index
 def cvi():
     cvi_data = pd.read_csv('CVI-county-pct-cat-CC-Extreme Events.gis.csv')
 
@@ -313,55 +318,19 @@ def cvi():
 
     return
 
-def median_income():
-    county_gpd = gpd.read_file('./cb_2018_us_county_20m/cb_2018_us_county_20m_netCRSload_RR2.shp')
-    county_gpd['GEoFIPS'] = county_gpd['GEOID'].astype(int)
-    income_data = pd.read_csv('./CAINC1/CAINC1__ALL_AREAS_2022.csv')
 
-    income_data = income_data[income_data['Description'] == 'Per capita personal income (dollars) 2/']
-    income_gpd_merged = county_gpd.merge(income_data, on='GEoFIPS')
-    income_gpd_merged.to_file('./cb_2018_us_county_20m/cb_2018_us_county_20m_income.shp')
-
-    states = income_gpd_merged['state_name'].unique()
-    for s in states:
-        state_data = income_gpd_merged[income_gpd_merged['state_name'] == s]
-        state_data['2022_norm']=(state_data['2022']-state_data['2022'].min())/(state_data['2022'].max()-state_data['2022'].min())
-        income_gpd_merged.loc[state_data.index, '2022ReNormalized'] = state_data['2022_norm']
-
-    income_gpd_merged = income_gpd_merged[income_gpd_merged['state_name'] == 'North Carolina']
-    # nfip_gpd_income_pos = income_gpd_merged[income_gpd_merged['net_crs_lo'] > 0]
-    # nfip_gpd_income_neg = income_gpd_merged[income_gpd_merged['net_crs_lo'] < 0]
-    # print(nfip_gpd_income_neg)
-    # sig_test = st.mannwhitneyu(nfip_gpd_income_pos['2022'], nfip_gpd_income_neg['2022'])
-    # print(f"Mann Whitney U significance test for net CRS load and income p-value: {sig_test[1]}")
-    # print(f"Mean Income Positive CRS: {nfip_gpd_income_pos['2022'].mean()}")
-    # print(f"Mean Income Index Negative CRS: {nfip_gpd_income_neg['2022'].mean()}")
-
-    # nfip_gpd_income_pos_high = nfip_gpd_income_pos[nfip_gpd_income_pos['2022'] > 66]
-    # print(nfip_gpd_income_pos_high.shape[0]/nfip_gpd_income_pos.shape[0])
-
-    # nfip_gpd_income_neg_high = nfip_gpd_income_neg[nfip_gpd_income_neg['2022'] > 66]
-    # print(nfip_gpd_income_neg_high.shape[0]/nfip_gpd_income_neg.shape[0])
-
-    plt.scatter(income_gpd_merged['net_crs_lo'],income_gpd_merged['2022'])
-    plt.show()
-
-    return
 
 ########################################
 
-# doi = '2024-01-31'
-doi = '2010-01-31'
+doi = '2024-01-31'
 
 
-# preprocess(doi)
+preprocess(doi)
 
-# crs_cross_sub(doi)
+crs_cross_sub(doi)
 
-# crs_load_correlation()
+crs_load_correlation()
 
-# rr2_crs()
+rr2_crs()
 
-# cvi()
-
-median_income()
+cvi()
